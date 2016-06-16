@@ -1,0 +1,8 @@
+#include "G4VSensitiveDetector.hh"
+#include "globals.hh"
+
+class G4Material;
+class G4HCofThisEvent;
+class G4Step;
+
+

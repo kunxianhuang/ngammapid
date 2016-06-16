@@ -1,0 +1,21 @@
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\
++                                                                               
+// SensitiveVolume.cc                                                           
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\
++                                                                               
+#include "PMTSensitiveVolume.hh"
+#include "G4TouchableHistory.hh"
+#include "G4Track.hh"
+#include "G4Step.hh"
+#include "G4ParticleDefinition.hh"
+#include "G4HCofThisEvent.hh"
+#include "G4VProcess.hh"
+
+//-----------------------------------------------------------------------------\
+-                                                                               
+  PMTSensitiveVolume::SensitiveVolume(G4String name)
+  : G4VSensitiveDetector(name)
+//-----------------------------------------------------------------------------\
+-                                                                               
+{}
+

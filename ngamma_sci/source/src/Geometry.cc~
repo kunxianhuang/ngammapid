@@ -1,0 +1,135 @@
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// Geometry.cc
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#include "Geometry.hh"
+#include "G4Box.hh"
+#include "G4Tubs.hh"
+#include "G4LogicalVolume.hh"
+#include "G4PVPlacement.hh"
+#include "G4VPhysicalVolume.hh"
+#include "G4ThreeVector.hh"
+#include "G4RotationMatrix.hh"
+#include "G4Transform3D.hh"
+#include "G4NistManager.hh"
+#include "G4VisAttributes.hh"
+#include "G4SystemOfUnits.hh"
+#include "G4SDManager.hh"
+#include "G4Material.hh"
+#include "G4MaterialTable.hh"
+#include "G4Element.hh"
+#include "G4ElementTable.hh"
+#include "G4OpticalSurface.hh"
+#include "G4OpboundaryProcess.hh"
+
+//------------------------------------------------------------------------------
+  Geometry::Geometry() {}
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+  Geometry::~Geometry() {}
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+  G4VPhysicalVolume* Geometry::Construct()
+//------------------------------------------------------------------------------
+{
+// Get pointer to 'Material Manager'
+   G4NistManager* materi_Man = G4NistManager::Instance();
+
+// Define 'World Volume'
+   // Define the shape of solid
+   G4double leng_X_World = 2.0*m;         // X-full-length of world 
+   G4double leng_Y_World = 2.0*m;         // Y-full-length of world 
+   G4double leng_Z_World = 2.0*m;         // Z-full-length of world 
+   G4Box* solid_World = 
+     new G4Box("Solid_World", leng_X_World/2.0, leng_Y_World/2.0, leng_Z_World/2.0);
+
+   // Define logical volume
+   G4Material* materi_World = materi_Man->FindOrBuildMaterial("G4_AIR");
+   G4LogicalVolume* logVol_World = 
+     new G4LogicalVolume(solid_World, materi_World, "LogVol_World");
+   logVol_World->SetVisAttributes (G4VisAttributes::Invisible);
+
+   // Placement of logical volume
+   G4int copyNum_World = 0;               // Set ID number of world
+   G4PVPlacement* physVol_World  = 
+     new G4PVPlacement(G4Transform3D(), "PhysVol_World", logVol_World, 0, 
+                       false, copyNum_World);
+
+// Define 'BGO Detector'
+   // Define the shape of solid
+   /*
+   G4double radius_BGO = 2.5*cm;
+   G4double leng_Z_BGO = 2.5*cm;
+   G4Tubs* solid_BGO = new G4Tubs("Solid_BGO", 0., radius_BGO, leng_Z_BGO/2.0, 0., 360.*deg); 
+   */
+   //Define 'CsI detector'
+   G4double leng_Z_CsI = 20*cm;
+   G4double rec_XY_CsI = 5.0*cm;
+   G4Box* solid_CsI = new G4Box("Solid_CsI", rec_XY_CsI, rec_XY_CsI, leng_Z_CsI);
+
+   // Define logical volume
+
+   G4Material* materi_CsI = materi_Man->FindOrBuildMaterial("G4_CESIUM_IODIDE");
+   G4LogicalVolume* logVol_CsI = 
+     new G4LogicalVolume( solid_CsI, materi_CsI, "LogVol_CsI", 0, 0, 0 );
+
+   // Placement of logical volume
+   G4double pos_X_LogV = 0.0*cm;           // X-location LogV 
+   G4double pos_Y_LogV = 0.0*cm;           // Y-location LogV
+   G4double pos_Z_LogV = 0.0*cm;           // Z-location LogV
+   G4ThreeVector threeVect_LogV = G4ThreeVector(pos_X_LogV, pos_Y_LogV, pos_Z_LogV);
+   G4RotationMatrix rotMtrx_LogV = G4RotationMatrix();
+   G4Transform3D trans3D_LogV = G4Transform3D(rotMtrx_LogV, threeVect_LogV);
+
+   G4int copyNum_LogV = 1000;                // Set ID number of LogV
+   new G4PVPlacement(trans3D_LogV, "PhysVol_CsI", logVol_CsI, physVol_World, 
+                     false, copyNum_LogV);
+
+   G4double PMTradius = 3.81*cm;          //PMT windiws radius
+   G4double PMTlength = 10.0*cm;          //PMT tube length
+   G4double PMTcokkiedepth = 5.0*mm;     //PMT cokkie depth
+
+
+
+   //PMT construction
+   G4Tubs* winPMT  = new G4Tubs("winPMT", 0.0*cm, PMTradius, PMTlength/2.0, 0.0, 360.0);
+
+   // PMMA C5H8O2 (Acrylic)
+   G4material* Acrylic = new G4Material("Acrylic", density=1.19*g/cm3, nelements=3);
+   // Element
+   G4Element* elO = new G4Element("Oxygen"  , "O", z=8. , a=16.00*g/mole);
+   G4Element* elH = new G4Element("Hydrogen", "H", z=1. , a=1.01*g/mole);
+   G4Element* elC  = new G4Element("Carbon","C", z=6., a=12.01*g/mole);
+
+
+   Acrylic->AddElement(elC, 5);
+   Acrylic->AddElement(elH, 8);
+   Acrylic->AddElement(elO, 2);
+
+   G4LogicalVolume* PMT_log = new G4LogicalVolume(winPMT, Acrylic, "PMT_log", 0,0,0);
+   //Optical surface condition
+   G4OpticalSurface* OpPMTSurface = new G4OpticalSurface("PMTSurface");
+   OpPMTSurface->SetType(dielectric_dielectric);
+   OpPMTSurface->SetFinish(polished);
+   OpPMTSurface->SetModel(glisur);
+   new G4LogicalSkinSurface("PMTSurface", PMT_log, OpPMTSurface);
+
+   G4ThreeVector threeVect_winLog = G4ThreeVector(pos_X_LogV, pos_Y_LogY, leng_Z_CsI);
+   G4RotationMatrix rotMtrx_winLog = G4RotationMatrix();
+   G4Transform3D trans3D_winLogV = G4Transform3D(rotMtrx_winLog, threeVect_winLog);
+
+   G4int copyNum_winLogV = 1001;
+   new G4PVPlacement(trans3D_winLogV, "PhysVol_PMTcokkie", PMT_log, physVol_World, false, copyNum_winLogV);
+   
+   PMTSensitiveVolume* PMTSD = new PMTSensitiveVolume("PMTSD");
+   SDmanager = G4SDManager::GetSDMpointer();
+   SDmanager->AddNeewDetector( PMTSD );
+   PMT_log->SetSensitiveDetector( PMTSD );
+   
+   //SensitiveVolume* aSV = new SensitiveVolume("SensitiveVolume");
+
+
+// Return the physical world
+   return physVol_World;
+}
